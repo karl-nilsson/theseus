@@ -28,8 +28,6 @@ typedef struct cell{
 
 unsigned char cell_value(cell *c);
 
-wchar_t print_cell(cell *c);
-
 void print_maze(cell **maze, size_t size);
 
 void gen_maze(cell **maze, cell **stack, size_t stack_size);
@@ -43,13 +41,16 @@ int getopt(int argc, char * const argv[], const char *optstring);
 extern char *optarg;
 extern int optind, opterr, optopt;
 
+// an array of tile symbols, corresponding to cell state
+const wchar_t *tiles = L" ╹╺┗╻┃┏┣╸┛━┻┒┫┳╋";
+
 int main(int argc, char **argv){
     setlocale(LC_ALL, "en_US.UTF-8");
 
     size_t size = DEFAULT_SIZE;
 
     int c;
-
+    // process command-line options
     while((c=getopt(argc, argv, "s:")) != -1){
         switch(c){
             case 's':
@@ -75,20 +76,21 @@ int main(int argc, char **argv){
             maze[i][j].state = 0x00;
             maze[i][j].x_pos = j;
             maze[i][j].y_pos = i;
-            // initialize pointers to neighbors
-            maze[i][j].n = (i == 0    ? NULL : &maze[i-1][j]);
+            // initialize pointers to neighbors (NULL if on edge)
+            maze[i][j].n = (i == 0      ? NULL : &maze[i-1][j]);
             maze[i][j].e = (j == size-1 ? NULL : &maze[i][j+1]);
             maze[i][j].s = (i == size-1 ? NULL : &maze[i+1][j]);
-            maze[i][j].w = (j == 0    ? NULL : &maze[i][j-1]);
+            maze[i][j].w = (j == 0      ? NULL : &maze[i][j-1]);
 
         }
     }
 
 #ifdef DEBUG
+    // to a test dump of all 16 tile symbols
     cell tmp;
     for(unsigned char i = 1; i <= 0x0F; i++) {
         tmp.state = i;
-        printf("%lc", print_cell(&tmp));
+        printf("%lc", tiles[tmp.state]);
     }
     printf("\n");
 #endif
@@ -128,17 +130,17 @@ void gen_maze(cell **maze, cell **stack, size_t stack_size) {
         stack_size++;
         // connect current cell with neighbor
         if(neighbor == cur->n){
-            cur->state+=N;
-            neighbor->state+=S;
+            cur->state += N;
+            neighbor->state += S;
         }else if(neighbor == cur->e){
-            cur->state+=E;
-            neighbor->state+=W;
+            cur->state += E;
+            neighbor->state += W;
         }else if(neighbor == cur->s){
-            cur->state+=S;
-            neighbor->state+=N;
+            cur->state += S;
+            neighbor->state += N;
         }else if(neighbor == cur->w){
-            cur->state+=W;
-            neighbor->state+=E;
+            cur->state += W;
+            neighbor->state += E;
         }
     }else if(stack_size > 0){
         // no neighbors, pop off top of stack and recurse
@@ -199,7 +201,8 @@ void print_maze(cell **maze, size_t size) {
     for(int i = 0; i < size; i++) {
         printf("|");
         for(int j = 0; j < size; j++) {
-            printf("%lc", print_cell(&maze[i][j]));
+            // the tile state maps to an array of tile symbols
+            printf("%lc", tiles[maze[i][j].state & 0x0F]);
         }
         printf("|\n");
     }
@@ -221,47 +224,4 @@ unsigned char cell_value(cell *c) {
     return 0x3F & c->state;
 }
 
-wchar_t print_cell(cell *c) {
-    // symbol of the maze cell    
-    wchar_t retval;
-
-    switch(0x0F & c->state) {
-        // empty
-        case 0x00: retval = 0x0020; break;
-        // N
-        case N: retval = 0x2579; break;
-        // E
-        case E: retval = 0x257A; break;
-        // NE
-        case N + E: retval = 0x2517; break;
-        // S
-        case S: retval = 0x257B; break;
-        // NS
-        case N + S: retval = 0x2503; break;
-        // ES
-        case E + S: retval = 0x250F; break;
-        // NES
-        case N + E + S: retval = 0x2523; break;
-        // W
-        case W: retval = 0x2578; break;
-        // NW
-        case N + W: retval = 0x251B; break;
-        // EW
-        case E + W: retval = 0x2501; break;
-        // NEW
-        case N + E + W: retval = 0x253B; break;
-        // SW
-        case S + W: retval = 0x2513; break;
-        // NSW
-        case N + S + W: retval = 0x252B; break;
-        // ESW
-        case E + S + W: retval = 0x2533; break;
-        // NESW
-        case N + E + S + W: retval = 0x254B; break;
-        // error
-        default: retval = 0;
-    }
-
-    return retval;
-}
 
